@@ -64,7 +64,7 @@ fetch(API + "/stops").then(r => r.json()).then(async stops => {
 })
 
 function loadArrivals(id) {
-    fetch(API + "/arrivals/by_stop/" + id).then(r => r.json()).then(arrivals => {
+    fetch(API + "/arrivals/by_stop/" + id, { mode: "cors"}).then(r => r.json()).then(arrivals => {
         departures2.innerHTML = ""
         if(!arrivals) {
             departures.innerHTML = "Falha ao carregar dados"

@@ -1,4 +1,4 @@
-const CACHE_NAME = "cmetgo-v1.06";
+const CACHE_NAME = "cmetgo-v1.10";
 const ASSETS = [
   "/CMet-Go/",
   "/CMet-Go/index.html",
@@ -35,8 +35,7 @@ self.addEventListener("fetch", event => {
     }
 
     if (url.href.startsWith(ARRIVALS_URL_PREFIX)) {
-        event.respondWith(staleWhileRevalidate(request, 24 * 60 * 60 * 1000));
-        return;
+      return;
     }
 
     event.respondWith(cacheFirst(request));
@@ -89,7 +88,7 @@ async function staleWhileRevalidate(request, maxAge) {
 
   // fallback to network
   try {
-    const fresh = await fetch(request);
+    const fresh = await fetch(request, { mode: "cors"});
     cache.put(request, fresh.clone());
     return fresh;
   } catch {
