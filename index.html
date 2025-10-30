@@ -6,7 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CMet Go</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ffdd01">
     <style>
         html,
         body {
@@ -49,17 +50,25 @@
 
         function getPosition() {
             navigator.geolocation.getCurrentPosition(
-                    pos => {
-                        const { latitude, longitude } = pos.coords;
-                        map.setView([latitude, longitude], 15);
-                        addMarker(latitude, longitude);
-                        setTimeout(() => statusDiv.remove(), 1500);
-                    },
-                    err => {
-                        console.error("Geolocation error:", err);
-                    },
-                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-                );
+                pos => {
+                    const { latitude, longitude } = pos.coords;
+                    map.setView([latitude, longitude], 15);
+                    addMarker(latitude, longitude);
+                    setTimeout(() => statusDiv.remove(), 1500);
+                },
+                err => {
+                    console.error("Geolocation error:", err);
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        }
+    </script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js')
+                .then(() => console.log('Service Worker registered 💖'))
+                .catch(err => console.error('Service Worker failed:', err));
         }
     </script>
 </body>
