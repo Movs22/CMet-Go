@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CMet Go</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    
+
     <meta name="theme-color" content="#ffdd01">
     <style>
         html,
@@ -30,17 +30,48 @@
     <script>
         const map = L.map('map').setView([0, 0], 13);
 
+        let pos = [];
+
+        L.Control.Recenter = L.Control.extend({
+            onAdd: function (map) {
+                const btn = L.DomUtil.create('button', 'recenter-btn');
+                btn.innerHTML = '⟳'; // or use '⟳', '🎯', etc.
+                btn.title = 'Recentrar';
+                btn.style.background = 'white';
+                btn.style.border = 'none';
+                btn.style.cursor = 'pointer';
+                btn.style.width = '32px';
+                btn.style.height = '32px';
+                btn.style.borderRadius = '4px';
+                btn.style.boxShadow = '0 1px 5px rgba(0,0,0,0.4)';
+                btn.style.fontSize = '18px';
+                btn.style.lineHeight = '30px';
+                btn.style.textAlign = 'center';
+
+                L.DomEvent.disableClickPropagation(btn);
+                L.DomEvent.on(btn, 'click', () => {
+                    if(!pos[0]) return
+                    map.setView(pos, 16);
+                });
+
+                return btn;
+            },
+            onRemove: function (map) { }
+        });
+
+        // Add it just below zoom controls
+        L.control.recenter = (opts) => new L.Control.Recenter(opts);
+        L.control.recenter({ position: 'topleft' }).addTo(map);
+
         // Load OpenStreetMap tiles
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
-        const statusDiv = document.getElementById("status");
 
-        function addMarker(lat, lon) {
-            L.marker([lat, lon]).addTo(map).openPopup();
-        }
+        let marker = L.marker([0, 0]).addTo(map);
+
 
         if ("geolocation" in navigator) {
             getPosition()
@@ -51,11 +82,11 @@
 
         function getPosition() {
             navigator.geolocation.getCurrentPosition(
-                pos => {
-                    const { latitude, longitude } = pos.coords;
-                    map.setView([latitude, longitude], 15);
-                    addMarker(latitude, longitude);
-                    setTimeout(() => statusDiv.remove(), 1500);
+                p => {
+                    const { latitude, longitude } = p.coords;
+                    if (!pos[0]) map.setView([latitude, longitude], 15);
+                    pos = [latitude, longitude]
+                    marker.setLatLng(pos);
                 },
                 err => {
                     console.error("Geolocation error:", err);
@@ -63,15 +94,33 @@
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
         }
-    </script>
 
-    <script>
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js')
-                .then(() => console.log('Service Worker registered'))
-                .catch(err => console.error('Service Worker failed:', err));
+            navigator.serviceWorker.register('sw.js').then(reg => {
+                setInterval(() => {
+                    reg.update();
+                }, 24 * 60 * 60 * 1000);
+
+                reg.addEventListener('updatefound', () => {
+                    const newWorker = reg.installing;
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            newWorker.postMessage({ action: 'skipWaiting' });
+                        }
+                    });
+                });
+            });
+
+            let refreshing;
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (refreshing) return;
+                refreshing = true;
+                window.location.reload();
+            });
         }
     </script>
+    <script src="app.js"></script>
+    
 </body>
 
 </html>
