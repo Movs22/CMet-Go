@@ -1,4 +1,4 @@
-const CACHE_NAME = "cmetgo-v1.08";
+const CACHE_NAME = "cmetgo-v1.39";
 const ASSETS = [
   "/CMet-Go/",
   "/CMet-Go/index.html",
@@ -11,6 +11,7 @@ const ASSETS = [
 
 const API_BASE = "https://api.carrismetropolitana.pt/v2"; // update this to the real API domain
 const STOPS_URL = `${API_BASE}/stops`;
+const LINES_URL = `${API_BASE}/lines`;
 const ARRIVALS_URL_PREFIX = `${API_BASE}/arrivals/by_stop`;
 
 
@@ -28,13 +29,13 @@ self.addEventListener("fetch", event => {
         return;
     }
 
-    if (url.href === STOPS_URL) {
+    if (url.href === STOPS_URL || url.href === LINES_URL) {
         event.respondWith(networkFirst(request));
         return;
     }
 
     if (url.href.startsWith(ARRIVALS_URL_PREFIX)) {
-        event.respondWith(staleWhileRevalidate(request, ONE_DAY));
+        event.respondWith(staleWhileRevalidate(request, 24 * 60 * 60 * 1000));
         return;
     }
 
