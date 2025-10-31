@@ -8,8 +8,10 @@ let departures = infoboard.querySelector("#departures")
 let arrivalUpdate;
 let departures2 = document.createElement("div")
 
+let lines;
+
 fetch(API + "/stops").then(r => r.json()).then(async stops => {
-    let lines = await fetch(API + "/lines").then(r => r.json()).catch(e => {throw e})
+    lines = await fetch(API + "/lines").then(r => r.json()).catch(e => {throw e})
     console.log(lines)
     let stopMarkers = []; // keep track of current markers
     const MIN_ZOOM_TO_SHOW = 15;
@@ -65,25 +67,32 @@ fetch(API + "/stops").then(r => r.json()).then(async stops => {
 
 function loadArrivals(id) {
     fetch(API + "/arrivals/by_stop/" + id, { mode: "cors"}).then(r => r.json()).then(arrivals => {
+        console.log(arrivals)
         departures2.innerHTML = ""
         if(!arrivals) {
             departures.innerHTML = "Falha ao carregar dados"
             return
         }
-        arrivals.filter(z => !z.observed_arrival_unix || z.scheduled_arrival_unix > Date.now()).forEach(arrival => {
+        arrivals.filter(z => !z.observed_arrival_unix && (z.scheduled_arrival_unix > (Date.now()/1000) || z.estimated_arrival_unix > (Date.now()/1000))).forEach(arrival => {
             let departure = document.createElement("div")
             departure.className = "departure"
             departure.id = arrival.trip_id
+            let ontime = (arrival.estimated_arrival_unix) <= (arrival.scheduled_arrival_unix + 60) && arrival.estimated_arrival_unix 
             departure.innerHTML = `
             <span class="line" style="background-color: ${lines.find(a => a.short_name === arrival.line_id).color}">${arrival.line_id}</span>
             <span class="dest">${arrival.headsign}</span>
-            <span class="arrival ${arrival.estimated_arrival ? "ontime" : ""}">${(arrival.estimated_arrival || arrival.scheduled_arrival).substring(0, 5)}</span>
+            <span class="arrival ${ontime ? "ontime" : ""}">${(ontime || !arrival.estimated_arrival) ? sanitize((arrival.estimated_arrival || arrival.scheduled_arrival).substring(0, 5)) : `<span class="scheduled">${sanitize(arrival.scheduled_arrival.substring(0,5))}</span><span class="estimated">${sanitize(arrival.estimated_arrival.substring(0,5))}</span>`}</span>
             `
             departures2.appendChild(departure)
         })
         departures.innerHTML = departures2.outerHTML
-    }).catch(() => {
+    }).catch((e) => {
+        console.log(e)
         departures.innerHTML = "Falha ao carregar dados"
         return
     })
+}
+
+function sanitize(time) {
+    return time.replace("24:","00:").replace("25:","01:").replace("26:","02:").replace("27:","03:").replace("28:","04:").replace("29:","05:").replace("30:","06:").replace("31:","07:")
 }

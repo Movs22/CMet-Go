@@ -1,4 +1,4 @@
-const CACHE_NAME = "cmetgo-v1.10";
+const CACHE_NAME = "cmetgo-v1.19";
 const ASSETS = [
   "/CMet-Go/",
   "/CMet-Go/index.html",
