@@ -5,6 +5,9 @@ let stopName = infoboard.querySelector("#title")
 let linesDiv = infoboard.querySelector("#lines")
 let departures = infoboard.querySelector("#departures")
 
+let arrivalUpdate;
+let departures2 = document.createElement("div")
+
 fetch(API + "/stops").then(r => r.json()).then(async stops => {
     let lines = await fetch(API + "/lines").then(r => r.json()).catch(e => {throw e})
     console.log(lines)
@@ -33,25 +36,16 @@ fetch(API + "/stops").then(r => r.json()).then(async stops => {
             });
 
             marker.on('click', () => {
+                clearInterval(arrivalUpdate)
                 infoboard.classList.remove("hidden")
                 stopName.innerHTML = stop.long_name
                 linesDiv.innerHTML = stop.line_ids.map(z => "<span class=\line\ style=\"background-color:" + lines.find(a => a.short_name === z).color + "\">" + z + "</span>").reduce((acc, v) => acc = acc + v, "")
                 departures.innerHTML = "A carregar viagens..."
-                fetch(API + "/arrivals/by_stop/" + stop.id).then(r => r.json()).then(arrivals => {
-                    departures.innerHTML = ""
-                    arrivals.filter(z => !z.observed_arrival_unix || z.scheduled_arrival_unix > Date.now()).forEach(arrival => {
-                        let departure = document.createElement("div")
-                        departure.className = "departure"
-                        departure.id = arrival.trip_id
-                        departure.innerHTML = `
-                        <span class="line" style="background-color: ${lines.find(a => a.short_name === arrival.line_id).color}">${arrival.line_id}</span>
-                        <span class="dest">${arrival.headsign}</span>
-                        <span class="arrival ${arrival.estimated_arrival ? "ontime" : ""}">${(arrival.estimated_arrival || arrival.scheduled_arrival).substring(0, 5)}</span>
-                        `
-                        departures.appendChild(departure)
-                    })
-                })
-                map.moveTo(latlng, 16)
+                loadArrivals(stop.id)
+                arrivalUpdate = setInterval(() => {
+                    loadArrivals(stop.id)
+                }, 30000)
+                map.setView([latlng[0] - 0.00075, latlng[1]], 18)
             });
 
             marker.addTo(map);
@@ -68,3 +62,28 @@ fetch(API + "/stops").then(r => r.json()).then(async stops => {
 }).catch(() => {
     alert("Falha ao atualizar dados")
 })
+
+function loadArrivals(id) {
+    fetch(API + "/arrivals/by_stop/" + id).then(r => r.json()).then(arrivals => {
+        departures2.innerHTML = ""
+        if(!arrivals) {
+            departures.innerHTML = "Falha ao carregar dados"
+            return
+        }
+        arrivals.filter(z => !z.observed_arrival_unix || z.scheduled_arrival_unix > Date.now()).forEach(arrival => {
+            let departure = document.createElement("div")
+            departure.className = "departure"
+            departure.id = arrival.trip_id
+            departure.innerHTML = `
+            <span class="line" style="background-color: ${lines.find(a => a.short_name === arrival.line_id).color}">${arrival.line_id}</span>
+            <span class="dest">${arrival.headsign}</span>
+            <span class="arrival ${arrival.estimated_arrival ? "ontime" : ""}">${(arrival.estimated_arrival || arrival.scheduled_arrival).substring(0, 5)}</span>
+            `
+            departures2.appendChild(departure)
+        })
+        departures.innerHTML = departures2.outerHTML
+    }).catch(() => {
+        departures.innerHTML = "Falha ao carregar dados"
+        return
+    })
+}
