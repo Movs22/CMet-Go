@@ -4,19 +4,30 @@ let infoboard = document.getElementById("infoboard")
 let stopName = infoboard.querySelector("#title")
 let linesDiv = infoboard.querySelector("#lines")
 let departures = infoboard.querySelector("#departures")
+let closeBtn = infoboard.querySelector("#close")
+
 
 let arrivalUpdate;
 let departures2 = document.createElement("div")
 
 let lines;
 
+let selectedStop;
+let updateStops
+
+closeBtn.onclick = () => {
+    selectedStop = null;
+    infoboard.classList.add("hidden")
+    updateStops()
+}
+
 fetch(API + "/stops").then(r => r.json()).then(async stops => {
     lines = await fetch(API + "/lines").then(r => r.json()).catch(e => {throw e})
-    console.log(lines)
+    
     let stopMarkers = []; // keep track of current markers
     const MIN_ZOOM_TO_SHOW = 15;
 
-    function updateStops() {
+    updateStops = () => {
         // Remove existing markers
         stopMarkers.forEach(m => map.removeLayer(m));
         stopMarkers = [];
@@ -28,6 +39,7 @@ fetch(API + "/stops").then(r => r.json()).then(async stops => {
         stops.forEach(stop => {
             const latlng = [stop.lat, stop.lon];
             if (!bounds.contains(latlng)) return; // only show stops in viewport
+            if(selectedStop && selectedStop !== stop.id) return;
 
             const marker = L.circleMarker(latlng, {
                 radius: 8,
@@ -66,8 +78,8 @@ fetch(API + "/stops").then(r => r.json()).then(async stops => {
 })
 
 function loadArrivals(id) {
+    selectedStop = id
     fetch(API + "/arrivals/by_stop/" + id, { mode: "cors"}).then(r => r.json()).then(arrivals => {
-        console.log(arrivals)
         departures2.innerHTML = ""
         if(!arrivals) {
             departures.innerHTML = "Falha ao carregar dados"
@@ -79,7 +91,7 @@ function loadArrivals(id) {
             departure.id = arrival.trip_id
             let ontime = (arrival.estimated_arrival_unix) <= (arrival.scheduled_arrival_unix + 60) && arrival.estimated_arrival_unix 
             departure.innerHTML = `
-            <span class="line" style="background-color: ${lines.find(a => a.short_name === arrival.line_id).color}">${arrival.line_id}</span>
+            <span class="line" style="background-color: ${lines.find(a => a.id === arrival.line_id).color}">${lines.find(a => a.id === arrival.line_id).short_name}</span>
             <span class="dest">${arrival.headsign}</span>
             <span class="arrival ${ontime ? "ontime" : ""}">${(ontime || !arrival.estimated_arrival) ? sanitize((arrival.estimated_arrival || arrival.scheduled_arrival).substring(0, 5)) : `<span class="scheduled">${sanitize(arrival.scheduled_arrival.substring(0,5))}</span><span class="estimated">${sanitize(arrival.estimated_arrival.substring(0,5))}</span>`}</span>
             `
